@@ -103,9 +103,9 @@ def _ring_flash_attention_bwd_tpu(axis_name, float32_logits, blockwise_kwargs, r
     o, q, k, v, attn_bias, segment_ids, cache_idx, l, m = res
     batch, num_heads, kv_len, dim_per_head = k.shape
     axis_size = lax.psum(1, axis_name)
-    dq = jnp.zeros_like(q, dtype=jnp.float32)
-    dk = jnp.zeros_like(k, dtype=jnp.float32)
-    dv = jnp.zeros_like(v, dtype=jnp.float32)
+    dq = jnp.zeros_like(q, dtype=q.dtype)
+    dk = jnp.zeros_like(k, dtype=k.dtype)
+    dv = jnp.zeros_like(v, dtype=v.dtype)
     query_chunk_size = blockwise_kwargs["query_chunk_size"]
     key_chunk_size = blockwise_kwargs["key_chunk_size"]
     q_block_size, kv_block_size = q.shape[2], k.shape[2] # assumes this function is pre-sharded inside shard_map
