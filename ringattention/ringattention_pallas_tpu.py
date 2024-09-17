@@ -598,7 +598,7 @@ def _flash_attention_kernel_single_batch(
             o_curr = jax.lax.dot(
                 p.astype(v.dtype), v, preferred_element_type=jnp.float32
             )
-            acc_scratch_ref[batch_idx] += o_curr * l_broadcast(l_next_inv_safe)
+            acc_scratch_ref[batch_idx] += (o_curr * l_broadcast(l_next_inv_safe)).astype(acc_scratch_ref.dtype)
 
     @pl.when(kv_seq_idx == (kv_seq_len // block_k_major) - 1)
     def store_output():
