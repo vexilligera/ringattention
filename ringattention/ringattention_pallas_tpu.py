@@ -23,9 +23,9 @@ def _ring_flash_attention_fwd_tpu(q, k, v, attn_bias, segment_ids, cache_idx, ax
     if attn_bias is not None:
         attn_bias = attn_bias[:, 0, 0] # (batch, k_len)
 
-    o = jnp.zeros((batch, num_heads, q_len, dim_per_head)).astype(q.dtype)
-    l = jnp.zeros((batch, num_heads, q_len)).astype(q.dtype)
-    m = jnp.full((batch, num_heads, q_len), -jnp.inf).astype(q.dtype)
+    o = jnp.zeros((batch, num_heads, q_len, dim_per_head)).astype(v.dtype)  # q.dtype
+    l = jnp.zeros((batch, num_heads, q_len)).astype(v.dtype)  # q.dtype
+    m = jnp.full((batch, num_heads, q_len), -jnp.inf).astype(v.dtype)  # q.dtype
 
     axis_size = lax.psum(1, axis_name)
     q_block_size, kv_block_size = q_len, kv_len # assumes this function is pre-sharded inside shard_map
