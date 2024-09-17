@@ -524,7 +524,7 @@ def _flash_attention_kernel_single_batch(
                 ab = pl.load(
                     ab_tile_ref,
                     (batch_idx[0], pl.dslice(0, block_q), pl.dslice(start_k, block_k)),
-                ).astype(jnp.float32)
+                ).astype(s.dtype) # astype(jnp.float32)
                 s += ab
 
             if sm_scale != 1.0:
