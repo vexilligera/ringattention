@@ -373,7 +373,8 @@ def _flash_attention_bwd(
         )
 
     di = jnp.sum(
-        o.astype(jnp.float32) * do.astype(jnp.float32), axis=-1
+        # o.astype(jnp.float32) * do.astype(jnp.float32), axis=-1
+        o * do, axis=-1
     )  # [batch_size, num_heads, q_seq_len]
 
     dk, dv = _flash_attention_bwd_dkv(
