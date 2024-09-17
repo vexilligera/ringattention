@@ -712,7 +712,7 @@ def _flash_attention_impl(
     out_specs = [pl.BlockSpec(o_index_map, (block_b, 1, block_q, head_dim))]
 
     if block_k != kv_seq_len:
-        scratch_shape = functools.partial(jax.ShapeDtypeStruct, dtype=jnp.float32)
+        scratch_shape = functools.partial(jax.ShapeDtypeStruct, dtype=v.dtype) # jnp.float32)
         m_scratch = scratch_shape((block_b, 1, block_q, MIN_BLOCK_SIZE))
         l_scratch = scratch_shape((block_b, 1, block_q, MIN_BLOCK_SIZE))
         acc_scratch = scratch_shape((block_b, 1, block_q, head_dim))
@@ -734,10 +734,10 @@ def _flash_attention_impl(
             pl.BlockSpec(lm_index_map, (block_b, 1, block_q, MIN_BLOCK_SIZE)),
         ]
         l = jax.ShapeDtypeStruct(
-            (batch_size, num_heads, q_seq_len, MIN_BLOCK_SIZE), dtype=jnp.float32
+            (batch_size, num_heads, q_seq_len, MIN_BLOCK_SIZE), dtype=v.dtype # jnp.float32
         )
         m = jax.ShapeDtypeStruct(
-            (batch_size, num_heads, q_seq_len, MIN_BLOCK_SIZE), dtype=jnp.float32
+            (batch_size, num_heads, q_seq_len, MIN_BLOCK_SIZE), dtype=v.dtype # jnp.float32
         )
         out_shape = (*out_shape, l, m)
 
