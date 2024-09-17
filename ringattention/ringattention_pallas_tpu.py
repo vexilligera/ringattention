@@ -482,9 +482,9 @@ def _flash_attention_kernel_single_batch(
 
     @pl.when(kv_seq_idx == 0)
     def start_new_sequence():
-        m_scratch_ref[batch_idx] = m_tile_ref[batch_idx]
-        l_scratch_ref[batch_idx] = l_tile_ref[batch_idx]
-        acc_scratch_ref[batch_idx] = acc_tile_ref[batch_idx]
+        m_scratch_ref[batch_idx] = m_tile_ref[batch_idx].astype(m_scratch_ref.dtype)
+        l_scratch_ref[batch_idx] = l_tile_ref[batch_idx].astype(l_scratch_ref.dtype)
+        acc_scratch_ref[batch_idx] = acc_tile_ref[batch_idx].astype(acc_scratch_ref.dtype)
 
     q_chunk_idx_start = q_chunk_idx_start_ref[0]
     k_chunk_idx_start = k_chunk_idx_start_ref[0]
@@ -516,7 +516,7 @@ def _flash_attention_kernel_single_batch(
             )  # [block_k, head_dim]
 
             s = jax.lax.dot_general(
-                q, k, TRANS_B_DIM_NUMBERS,# preferred_element_type=jnp.float32
+                q, k, TRANS_B_DIM_NUMBERS, preferred_element_type=jnp.float32
             )  # [block_q, block_k]
 
             # Add attention bias if needed.
@@ -596,7 +596,7 @@ def _flash_attention_kernel_single_batch(
                 v_tile_ref, (*batch_idx, pl.dslice(start_k, block_k), slice(None))
             )
             o_curr = jax.lax.dot(
-                p.astype(v.dtype), v,# preferred_element_type=jnp.float32
+                p.astype(v.dtype), v, preferred_element_type=jnp.float32
             )
             acc_scratch_ref[batch_idx] += (o_curr * l_broadcast(l_next_inv_safe)).astype(acc_scratch_ref.dtype)
 
@@ -971,7 +971,7 @@ def _flash_attention_dkv_kernel(
             p = p * pltpu.repeat(
                 1 / l, block_k // MIN_BLOCK_SIZE, axis=1
             )  # [block_q_major, block_k_major]
-            dv = lax.dot(p.T.astype(do.dtype), do, ) # preferred_element_type=jnp.float32)
+            dv = lax.dot(p.T.astype(do.dtype), do, preferred_element_type=jnp.float32)
             pl.store(
                 dv_scratch_ref,
                 (pl.ds(start_k, block_k), slice(None)),
@@ -983,7 +983,7 @@ def _flash_attention_dkv_kernel(
             # do: [block_q, head_dim]
             # v: [block_k_major, head_dim]
             dp = lax.dot_general(
-                do, v, TRANS_B_DIM_NUMBERS, # preferred_element_type=jnp.float32
+                do, v, TRANS_B_DIM_NUMBERS, preferred_element_type=jnp.float32
             )
             ds = (dp - pltpu.repeat(di, block_k // MIN_BLOCK_SIZE, axis=1)) * p
 
@@ -992,7 +992,7 @@ def _flash_attention_dkv_kernel(
 
             # ds: [block_q_major, block_k_major]
             # q: [block_q_major, head_dim]
-            dk = lax.dot(ds.T.astype(do.dtype), q, # preferred_element_type=jnp.float32)
+            dk = lax.dot(ds.T.astype(do.dtype), q, preferred_element_type=jnp.float32)
             pl.store(
                 dk_scratch_ref,
                 (pl.ds(start_k, block_k), slice(None)),
@@ -1368,7 +1368,7 @@ def _flash_attention_dq_kernel(
             do,
             v,
             TRANS_B_DIM_NUMBERS,
-            # preferred_element_type=jnp.float32,
+            preferred_element_type=jnp.float32,
         )
         ds = (dp - pltpu.repeat(di, block_k // MIN_BLOCK_SIZE, axis=1)) * p
 
