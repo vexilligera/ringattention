@@ -840,6 +840,7 @@ def _flash_attention_impl(
         q_segment_ids,
         kv_segment_ids,
     )
+    o = o.astype(v.dtype)
     if save_residuals:
         l, m = (v[..., 0] for v in aux[-2:])
         return (o, l, m)
@@ -1201,8 +1202,8 @@ def _flash_attention_bwd_dkv(
     out_shapes = [
         jax.ShapeDtypeStruct((batch_size, num_heads, kv_seq_len, head_dim), k.dtype),
         jax.ShapeDtypeStruct((batch_size, num_heads, kv_seq_len, head_dim), v.dtype),
-        jax.ShapeDtypeStruct((block_k_major, head_dim), jnp.float32),
-        jax.ShapeDtypeStruct((block_k_major, head_dim), jnp.float32),
+        jax.ShapeDtypeStruct((block_k_major, head_dim), v.dtype),
+        jax.ShapeDtypeStruct((block_k_major, head_dim), v.dtype),
     ]
 
     def dkv_index_map(batch_index, head_index, kv_seq_index, _, q_idx_ref, k_idx_ref):
