@@ -14,7 +14,7 @@ from typing import Any, NamedTuple, Optional
 from ringattention.ringattention_jax import below_or_on_diag
 
 
-def _ring_flash_attention_fwd_tpu(q, k, v, attn_bias, segment_ids, cache_idx, axis_name, float32_logits, blockwise_kwargs):
+def _ring_flash_attention_fwd_tpu(q, k, v, attn_bias, segment_ids, cache_idx, scale, axis_name, float32_logits, blockwise_kwargs):
     if float32_logits:
         q, k = q.astype(jnp.float32), k.astype(jnp.float32)
     q, k, v = map(lambda x: rearrange(x, 'b q h d -> b h q d'), [q, k, v])
@@ -54,7 +54,7 @@ def _ring_flash_attention_fwd_tpu(q, k, v, attn_bias, segment_ids, cache_idx, ax
         block_q_dq=query_chunk_size,
     )
 
-    scale = q.shape[-1] ** -0.5
+    # scale = q.shape[-1] ** -0.5
     def scan_kv_block(carry, idx):
         o, l, m, k, v = carry
         if attn_bias is not None:
@@ -98,18 +98,18 @@ def _ring_flash_attention_fwd_tpu(q, k, v, attn_bias, segment_ids, cache_idx, ax
     output = rearrange(o.astype(v.dtype), 'b h q d -> b q h d')
     return output, (o, q, k, v, attn_bias, segment_ids, cache_idx, l, m)
 
-def _ring_flash_attention_bwd_tpu(axis_name, float32_logits, blockwise_kwargs, res, g):
+def _ring_flash_attention_bwd_tpu(scale, axis_name, float32_logits, blockwise_kwargs, res, g):
     del float32_logits
     o, q, k, v, attn_bias, segment_ids, cache_idx, l, m = res
     batch, num_heads, kv_len, dim_per_head = k.shape
     axis_size = lax.psum(1, axis_name)
-    dq = jnp.zeros_like(q, dtype=jnp.float32)
-    dk = jnp.zeros_like(k, dtype=jnp.float32)
-    dv = jnp.zeros_like(v, dtype=jnp.float32)
+    dq = jnp.zeros_like(q, dtype=q.dtype)
+    dk = jnp.zeros_like(k, dtype=k.dtype)
+    dv = jnp.zeros_like(v, dtype=v.dtype)
     query_chunk_size = blockwise_kwargs["query_chunk_size"]
     key_chunk_size = blockwise_kwargs["key_chunk_size"]
     q_block_size, kv_block_size = q.shape[2], k.shape[2] # assumes this function is pre-sharded inside shard_map
-    scale = q.shape[-1] ** -0.5
+    # scale = q.shape[-1] ** -0.5
 
     if segment_ids is not None:
         if cache_idx is None:
@@ -183,9 +183,9 @@ def _ring_flash_attention_bwd_tpu(axis_name, float32_logits, blockwise_kwargs, r
     dv = dv.astype(v.dtype)
     return dq, dk, dv, None, None, None
 
-@partial(jax.custom_vjp, nondiff_argnums=[6, 7, 8])
-def ring_flash_attention_tpu(q, k, v, attn_bias, segment_ids, cache_idx, axis_name, float32_logits, blockwise_kwargs):
-    y, _ = _ring_flash_attention_fwd_tpu(q, k, v, attn_bias, segment_ids, cache_idx, axis_name, float32_logits, blockwise_kwargs)
+@partial(jax.custom_vjp, nondiff_argnums=[6, 7, 8, 9])
+def ring_flash_attention_tpu(q, k, v, attn_bias, segment_ids, cache_idx, scale, axis_name, float32_logits, blockwise_kwargs):
+    y, _ = _ring_flash_attention_fwd_tpu(q, k, v, attn_bias, segment_ids, cache_idx, scale, axis_name, float32_logits, blockwise_kwargs)
     return y
 
 ring_flash_attention_tpu.defvjp(_ring_flash_attention_fwd_tpu, _ring_flash_attention_bwd_tpu)
