@@ -484,9 +484,9 @@ def _flash_attention_kernel_single_batch(
 
     @pl.when(kv_seq_idx == 0)
     def start_new_sequence():
-        m_scratch_ref[batch_idx] = m_tile_ref[batch_idx]
-        l_scratch_ref[batch_idx] = l_tile_ref[batch_idx]
-        acc_scratch_ref[batch_idx] = acc_tile_ref[batch_idx]
+        m_scratch_ref[batch_idx] = m_tile_ref[batch_idx].astype(m_scratch_ref.dtype)
+        l_scratch_ref[batch_idx] = l_tile_ref[batch_idx].astype(l_scratch_ref.dtype)
+        acc_scratch_ref[batch_idx] = acc_tile_ref[batch_idx].astype(acc_scratch_ref.dtype)
 
     q_chunk_idx_start = q_chunk_idx_start_ref[0]
     k_chunk_idx_start = k_chunk_idx_start_ref[0]
@@ -588,8 +588,8 @@ def _flash_attention_kernel_single_batch(
                     raise NotImplementedError(
                         f"{head_dim=} should be a multiple of {MIN_BLOCK_SIZE} if larger"
                     )
-            l_scratch_ref[batch_idx] = l_next
-            m_scratch_ref[batch_idx] = m_next
+            l_scratch_ref[batch_idx] = l_next.astype(l_scratch_ref.dtype)
+            m_scratch_ref[batch_idx] = m_next.astype(m_scratch_ref.dtype)
 
             l_next_inv_safe = jnp.where(l_next == 0.0, 1.0, 1.0 / l_next)
             acc_scratch_ref[batch_idx] *= l_broadcast(l_corr * l_next_inv_safe)
