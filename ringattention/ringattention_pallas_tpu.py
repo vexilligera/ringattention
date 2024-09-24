@@ -92,6 +92,9 @@ def _ring_flash_attention_fwd_tpu(q, k, v, attn_bias, segment_ids, cache_idx, sc
             debug=False
         )
         k, v = map(lambda x: lax.ppermute(x, axis_name, perm=[(i, (i + 1) % axis_size) for i in range(axis_size)]), (k, v))
+        o = o.astype(q.dtype)
+        l = l.astype(q.dtype)
+        m = m.astype(q.dtype)
         return (o, l, m, k, v), None
     (o, l, m, _, _), _ = lax.scan(scan_kv_block,
         init=(o, l, m, k, v), xs=jnp.arange(0, axis_size))
